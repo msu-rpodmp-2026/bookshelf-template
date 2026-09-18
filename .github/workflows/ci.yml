@@ -1,0 +1,71 @@
+# Автоматическая проверка перед ревью.
+# Красный результат означает, что работа к проверке не принимается:
+# приведите код в порядок и запушьте в ту же ветку — проверка запустится заново.
+
+name: Проверка работы
+
+on:
+  pull_request:
+    branches: [main]
+
+# Достаточно проверять последний коммит: предыдущие запуски отменяются,
+# чтобы не расходовать минуты Actions впустую.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Форматирование, анализ, тесты
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # --- Консольный проект: занятия 1–5 ---------------------------------
+      - name: Консольный проект — зависимости
+        if: hashFiles('bookshelf_console/pubspec.yaml') != ''
+        working-directory: bookshelf_console
+        run: dart pub get
+
+      - name: Консольный проект — форматирование
+        if: hashFiles('bookshelf_console/pubspec.yaml') != ''
+        working-directory: bookshelf_console
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Консольный проект — статический анализ
+        if: hashFiles('bookshelf_console/pubspec.yaml') != ''
+        working-directory: bookshelf_console
+        run: dart analyze
+
+      - name: Консольный проект — тесты
+        if: hashFiles('bookshelf_console/test/**') != ''
+        working-directory: bookshelf_console
+        run: dart test
+
+      # --- Flutter-проект: занятия 6–13 -----------------------------------
+      - name: Flutter-проект — зависимости
+        if: hashFiles('bookshelf/pubspec.yaml') != ''
+        working-directory: bookshelf
+        run: flutter pub get
+
+      - name: Flutter-проект — форматирование
+        if: hashFiles('bookshelf/pubspec.yaml') != ''
+        working-directory: bookshelf
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Flutter-проект — статический анализ
+        if: hashFiles('bookshelf/pubspec.yaml') != ''
+        working-directory: bookshelf
+        run: flutter analyze
+
+      - name: Flutter-проект — тесты
+        if: hashFiles('bookshelf/test/**') != ''
+        working-directory: bookshelf
+        run: flutter test
